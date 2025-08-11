@@ -7,17 +7,8 @@
 #include "utils.h"
 #include "TextBuffer.h"
 
-/*
- * CONSTANTS - DEFININITIONS
- * */
-// #define name value - works across all the files that include this header
-
-// #define INPUT_WIDTH 80
-// #define INPUT_HEIGHT 30
-
 #define CHAR_WIDTH 20
 #define CHAR_HEIGHT 30
-
 
 class TextEditor {
     private:
