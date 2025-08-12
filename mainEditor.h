@@ -64,6 +64,12 @@ class TextEditor {
         void getPositionInputField(int x, int y, float& destX, float& destY);
         void getCursorPosition(float& x, float& y);
 
-        Uint32 sizeOfTextBufferBytes();
+        void handleInputReturnKey();
+        void handleInputBackspaceKey();
+        void handleInputLeftKey();
+        void handleInputRightKey();
+        void handleInputUpKey();
+        void handleInputDownKey();
+        void handleInputTabKey();
 };
 

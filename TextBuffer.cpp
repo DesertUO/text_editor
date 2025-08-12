@@ -50,7 +50,7 @@ std::string TextBuffer::bufferToString() {
     return str;
 }
 
-Uint32 TextBuffer::sizeOfTextBufferBytes() {
+Uint32 TextBuffer::sizeBytes() {
     Uint32 totalBytes = 0;
     /* textBuffer: std::vector<std::vector<char*>> */
     totalBytes += buffer.capacity() + sizeof(std::vector<char*>);

@@ -23,5 +23,5 @@ class TextBuffer {
 
         void freeBuffer();
 
-        Uint32 sizeOfTextBufferBytes();
+        Uint32 sizeBytes();
 };
