@@ -36,9 +36,12 @@ class TextEditor {
         int cursorPreservingPosition[2];
 
         std::unordered_map<std::string, Timer> timers;
-        std::unordered_map<std::string, bool> togglers;
+        std::unordered_map<std::string, bool> states;
 
         bool _dirty = true;
+
+        bool newFile = true;
+        std::string pathToFileOpened;
     public:
         TextEditor();
         ~TextEditor();
@@ -60,6 +63,8 @@ class TextEditor {
         void renderTextBufferLineNumbers();
         void renderTextBuffer();
 
+        void renderUIElements();
+
         void inputToTextBuffer(const char* input);
         void getPositionInputField(int x, int y, float& destX, float& destY);
         void getCursorPosition(float& x, float& y);
@@ -71,5 +76,13 @@ class TextEditor {
         void handleInputUpKey();
         void handleInputDownKey();
         void handleInputTabKey();
+
+        void handleInputLCTRLKeyRelease();
+
+        void syncPreservingCursorPosition();
+        void adjustCameraToCursor();
+
+        void handleTextBufferSaveToFile();
+
 };
 

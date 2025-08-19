@@ -8,9 +8,11 @@ struct CharBuff {
     char* charPtr;
 };
 
+typedef std::vector<CharBuff> line;
+
 class TextBuffer {
     private:
-        std::vector<std::vector<CharBuff>> buffer;
+        std::vector<line> buffer;
     public:
         TextBuffer(const std::string& = "");
         ~TextBuffer();

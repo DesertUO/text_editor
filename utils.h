@@ -6,6 +6,11 @@
 #include <functional>
 #include <SDL3/SDL.h>
 
+struct Vec2 {
+    float x;
+    float y;
+};
+
 typedef std::vector<uint8_t> grapheme;
 
 struct Timer {

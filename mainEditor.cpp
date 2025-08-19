@@ -26,7 +26,10 @@ TextEditor::TextEditor() {
     cursorPreservingPosition[1] = 0;
 
     timers = {};
-    togglers = {};
+    states = {};
+
+    newFile = true;
+    pathToFileOpened = "";
 }
 
 /*
@@ -104,7 +107,8 @@ void TextEditor::run() {
     timers["cursor_blink"] = {
         0.0f,
         [](float current) {
-            return (current > 1000000.0f) ? -1000000.0f : current;
+            float onTime = 500000.0f;
+            return (current > onTime) ? -onTime : current;
         }
     };
 
@@ -117,6 +121,7 @@ void TextEditor::run() {
         Uint64 currentTime = SDL_GetTicksNS();
         dt = (currentTime - lastTime) / 1000.0f; // Convert to seconds
         lastTime = currentTime;
+        states["currently_typing"] = false;
         update(dt);
         render();
     }
@@ -128,13 +133,28 @@ void TextEditor::stop() {
     running = false;
 }
 
+// Helper methods
+inline void TextEditor::syncPreservingCursorPosition() {
+    cursorPreservingPosition[0] = cursorPosition[0];
+    cursorPreservingPosition[1] = cursorPosition[1];
+}
+
+inline void TextEditor::adjustCameraToCursor() {
+    int relX = cursorPosition[0] - cameraTopLeftPos[0];
+    int relY = cursorPosition[1] - cameraTopLeftPos[1];
+    if(relX < 0) cameraTopLeftPos[0] += relX;
+    else if(relX >= INPUT_WIDTH) cameraTopLeftPos[0] += relX - INPUT_WIDTH + 1;
+    if(relY < 0) cameraTopLeftPos[1] += relY;
+    else if(relY >= INPUT_HEIGHT) cameraTopLeftPos[1] += relY - INPUT_HEIGHT + 1;
+}
+
 void TextEditor::inputToTextBuffer(const char* input) {
     char* dest = new char[strlen(input) + 1];
     strcpy(dest, input);
     CharBuff newDest;
     newDest.charPtr = dest;
 
-    std::vector<CharBuff>& currentLine = textBuffer->getBufferModifiable()[cursorPosition[1]];
+    line& currentLine = textBuffer->getBufferModifiable()[cursorPosition[1]];
 
     currentLine.insert(currentLine.begin() + cursorPosition[0], newDest);
     cursorPosition[0]++;
@@ -146,7 +166,8 @@ void TextEditor::inputToTextBuffer(const char* input) {
         cameraTopLeftPos[0]++;
     }
 
-    cursorPreservingPosition[0] = cursorPosition[0];
+    states["currently_typing"] = true;
+    syncPreservingCursorPosition();
 }
 
 // Handle adding a new line
@@ -156,14 +177,13 @@ void TextEditor::handleInputReturnKey() {
         cameraTopLeftPos[1]++;
     }
 
-    textBuffer->getBufferModifiable().insert(textBuffer->getBuffer().begin() + cursorPosition[1] + 1, std::vector<CharBuff>{});
+    textBuffer->getBufferModifiable().insert(textBuffer->getBuffer().begin() + cursorPosition[1] + 1, line{});
 
     cursorPosition[1]++;
-    cursorPreservingPosition[1] = cursorPosition[1];
 
     if(cursorPosition[0] < (currentLineSize)) {
-        std::vector<CharBuff>* prevLine = &textBuffer->getBufferModifiable()[cursorPosition[1] - 1];
-        std::vector<CharBuff>* destLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
+        line* prevLine = &textBuffer->getBufferModifiable()[cursorPosition[1] - 1];
+        line* destLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
         destLine->insert(
             destLine->end(),
             std::make_move_iterator(prevLine->begin() + cursorPosition[0]),
@@ -174,14 +194,13 @@ void TextEditor::handleInputReturnKey() {
 
     cursorPosition[0] = 0;
     cameraTopLeftPos[0] = 0;
-    cursorPreservingPosition[0] = 0;
-}
+    syncPreservingCursorPosition();}
 
 void TextEditor::handleInputBackspaceKey() {
     // Delete on line
-    std::vector<CharBuff>* previousLine = &textBuffer->getBufferModifiable()[cursorPosition[1]-1];
+    line* previousLine = &textBuffer->getBufferModifiable()[cursorPosition[1]-1];
     if(cursorPosition[0] > 0) {
-        std::vector<CharBuff>* currentLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
+        line* currentLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
 
         char * toDelete = (*currentLine)[cursorPosition[0] - 1].charPtr;
         delete[] toDelete;
@@ -194,8 +213,8 @@ void TextEditor::handleInputBackspaceKey() {
         if(cursorPosition[1] <= 0) { return; }
 
         if(textBuffer->getBuffer()[cursorPosition[1]].size() > 0) {
-            std::vector<CharBuff>* prevLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
-            std::vector<CharBuff>* destLine = &textBuffer->getBufferModifiable()[cursorPosition[1] - 1];
+            line* prevLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
+            line* destLine = &textBuffer->getBufferModifiable()[cursorPosition[1] - 1];
             int prevDestLineSize = destLine->size();
             destLine->insert(
                 destLine->end(),
@@ -213,8 +232,7 @@ void TextEditor::handleInputBackspaceKey() {
         cursorPosition[1]--;
     }
 
-    cursorPreservingPosition[0] = cursorPosition[0];
-    cursorPreservingPosition[1] = cursorPosition[1];
+    syncPreservingCursorPosition();
 }
 
 void TextEditor::handleInputLeftKey() {
@@ -225,10 +243,8 @@ void TextEditor::handleInputLeftKey() {
         int prevLineSize = textBuffer->getBuffer()[cursorPosition[1]-1].size();
 
         cursorPosition[1]--;
-        cursorPreservingPosition[1] = cursorPosition[1];
 
         cursorPosition[0] = prevLineSize + 1;
-        cursorPreservingPosition[0] = cursorPosition[0];
     }
 
     int relativeX = cursorPosition[0] - cameraTopLeftPos[0];
@@ -245,7 +261,8 @@ void TextEditor::handleInputLeftKey() {
     }
 
     cursorPosition[0]--;
-    cursorPreservingPosition[0] = cursorPosition[0];
+
+    syncPreservingCursorPosition();
 }
 
 void TextEditor::handleInputRightKey() {
@@ -266,7 +283,6 @@ void TextEditor::handleInputRightKey() {
         cursorPreservingPosition[0] = -1;
 
         cursorPosition[1]++;
-        cursorPreservingPosition[1] = cursorPosition[1];
 
         cameraTopLeftPos[0] = 0;
     }
@@ -283,7 +299,7 @@ void TextEditor::handleInputRightKey() {
     }
 
     cursorPosition[0]++;
-    cursorPreservingPosition[0] = cursorPosition[0];
+    syncPreservingCursorPosition();
 }
 
 void TextEditor::handleInputUpKey() {
@@ -328,7 +344,7 @@ void TextEditor::handleInputDownKey() {
 void TextEditor::handleInputTabKey() {
     int cursorX = cursorPosition[0];
     int cursorY = cursorPosition[1];
-    std::vector<CharBuff>* currentLine = &textBuffer->getBufferModifiable()[cursorY];
+    line* currentLine = &textBuffer->getBufferModifiable()[cursorY];
     for(int i = 0; i < 4; i++) {
         char space[2] = " ";
         char* newSpace = extractUtf8Char(space, 0);
@@ -338,9 +354,22 @@ void TextEditor::handleInputTabKey() {
     }
 
     cursorPosition[0] = cursorPosition[0] + 4;
-    cursorPreservingPosition[0] = cursorPosition[0];
     int relativeX = cursorPosition[0] - cameraTopLeftPos[1];
     if(relativeX > INPUT_WIDTH) { cameraTopLeftPos[0] += 4; }
+
+    syncPreservingCursorPosition();
+}
+
+
+// To do TODO TO-DO to-do ToDo Todo
+bool thisFeatureEnabled = false;
+void TextEditor::handleTextBufferSaveToFile() {
+    if(newFile && thisFeatureEnabled) {
+        states["ui_window_ask_file_save_path"] = true;
+        // SDL_ShowOpenFileDialog();
+        SDL_StopTextInput(_window);
+    }
+    // states["ui_window_ask_file_save_path"] = false;
 }
 
 void TextEditor::handleKeyDownEvent(const SDL_Event& e) {
@@ -372,10 +401,32 @@ void TextEditor::handleKeyDownEvent(const SDL_Event& e) {
         case SDLK_TAB:
             handleInputTabKey();
             break;
+
+        case SDLK_LCTRL:
+            states["LCTRL_DOWN"] = true;
+            // SDL_StopTextInput(_window);
+            break;
+
+        case SDLK_S: {
+            if(states["LCTRL_DOWN"]) {
+                handleTextBufferSaveToFile();
+            }
+            break;
+        }
     }
 }
 
-void TextEditor::handleKeyUpEvent(const SDL_Event& e) {}
+void TextEditor::handleInputLCTRLKeyRelease() {
+    states["LCTRL_DOWN"] = false;
+    SDL_StartTextInput(_window);
+}
+
+void TextEditor::handleKeyUpEvent(const SDL_Event& e) {
+    switch(e.key.key) {
+        case SDLK_LCTRL:
+            handleInputLCTRLKeyRelease();
+    }
+}
 
 void TextEditor::handleEvents(SDL_Event e) {
     while(SDL_PollEvent(&e)) {
@@ -384,6 +435,7 @@ void TextEditor::handleEvents(SDL_Event e) {
                 stop();
                 break;
             case SDL_EVENT_TEXT_INPUT: {
+                if(!SDL_TextInputActive(_window)) { break; }
                 auto inputChar = e.text.text;
                 inputToTextBuffer(inputChar);
                 break;
@@ -392,6 +444,7 @@ void TextEditor::handleEvents(SDL_Event e) {
                 handleKeyDownEvent(e);
                 break;
             case SDL_EVENT_KEY_UP: {
+                handleKeyUpEvent(e);
                 break;
             }
             default:
@@ -556,6 +609,37 @@ void TextEditor::renderTextBuffer() {
     }
 }
 
+void TextEditor::renderUIElements() {
+    int winWidth, winHeight;
+    SDL_GetWindowSize(_window, &winWidth, &winHeight);
+    SDL_Color originalColors;
+    SDL_GetRenderDrawColor(
+            _renderer,
+            &originalColors.r,
+            &originalColors.g,
+            &originalColors.b,
+            &originalColors.a
+            );
+    if(states["ui_window_ask_file_save_path"]) {
+        SDL_SetRenderDrawColor(_renderer, 250, 100, 200, SDL_ALPHA_OPAQUE);
+        Vec2 halfSizeUIWindowAskFileSavePath{200.0f, 200.0f};
+        SDL_FRect ui_background {
+            winWidth/2.0f - halfSizeUIWindowAskFileSavePath.x,
+            winHeight/2.0f - halfSizeUIWindowAskFileSavePath.y,
+            2.0f * halfSizeUIWindowAskFileSavePath.x,
+            2.0f * halfSizeUIWindowAskFileSavePath.y
+        };
+        SDL_RenderFillRect(_renderer, &ui_background);
+    }
+    SDL_SetRenderDrawColor(
+            _renderer,
+            originalColors.r,
+            originalColors.g,
+            originalColors.b,
+            originalColors.a
+            );
+}
+
 void TextEditor::render() {
     int winWidth, winHeight;
     SDL_GetWindowSize(_window, &winWidth, &winHeight);
@@ -583,7 +667,7 @@ void TextEditor::render() {
     SDL_RenderFillRect(_renderer, &inputBox);
 
     // Render the cursor based on a timer
-    if(timers["cursor_blink"].value > 0.0f) {
+    if(timers["cursor_blink"].value > 0.0f || states["currently_typing"]) {
         float cursorX, cursorY;
         getCursorPosition(cursorX, cursorY);
         SDL_FRect cursorRect = { cursorX, cursorY, CHAR_WIDTH, CHAR_HEIGHT };
@@ -601,9 +685,7 @@ void TextEditor::render() {
     SDL_SetRenderDrawColor(_renderer, 100, 100, 200, SDL_ALPHA_OPAQUE);
     renderTextBufferLineNumbers();
 
-    // Render the container like the wrapper of the editor for
-    // "aesthetics" reasons
-    SDL_SetRenderDrawColor(_renderer, 100, 100, 100, SDL_ALPHA_OPAQUE);
+    renderUIElements();
 
     SDL_RenderPresent(_renderer);
 }
