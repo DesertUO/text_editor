@@ -342,8 +342,9 @@ void TextEditor::handleInputDownKey() {
 void TextEditor::handleInputTabKey() {
     int cursorX = cursorPosition[0];
     int cursorY = cursorPosition[1];
+    int spacesToAddToNextTabColumn = TAB_WIDTH - (cursorX % TAB_WIDTH);
     line* currentLine = &textBuffer->getBufferModifiable()[cursorY];
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < spacesToAddToNextTabColumn; i++) {
         char space[2] = " ";
         char* newSpace = extractUtf8Char(space, 0);
         CharBuff spaceBuff;
@@ -351,9 +352,9 @@ void TextEditor::handleInputTabKey() {
         currentLine->insert(currentLine->begin() + cursorX, spaceBuff);
     }
 
-    cursorPosition[0] = cursorPosition[0] + 4;
+    cursorPosition[0] = cursorPosition[0] + spacesToAddToNextTabColumn;
     int relativeX = cursorPosition[0] - cameraTopLeftPos[1];
-    if(relativeX > INPUT_WIDTH) { cameraTopLeftPos[0] += 4; }
+    if(relativeX > INPUT_WIDTH) { cameraTopLeftPos[0] += spacesToAddToNextTabColumn; }
 
     syncPreservingCursorPosition();
 }
@@ -376,16 +377,43 @@ void TextEditor::handleZoomOut() {
     }
 }
 
+struct SDL_DialogFileFilter filtersOnSave[] = {
+    { "All files", "*" }
+};
+
+static void SDLCALL callbackOnSave(void* userdata, const char* const* filelist, int filter)
+{
+    if (!filelist) {
+        SDL_Log("An error occured: %s", SDL_GetError());
+        return;
+    } else if (!*filelist) {
+        SDL_Log("The user did not select any file.");
+        SDL_Log("Most likely, the dialog was canceled.");
+        return;
+    }
+
+    while (*filelist) {
+        SDL_Log("Full path to selected file: '%s'", *filelist);
+        filelist++;
+    }
+
+    /*
+    if (filter < 0) {
+        SDL_Log("The current platform does not support fetching "
+                "the selected filter, or the user did not select"
+                " any filter.");
+    } else if (filter < SDL_arraysize(filtersOnSave)) {
+        SDL_Log("The filter selected by the user is '%s' (%s).",
+                filtersOnSave[filter].pattern, filtersOnSave[filter].name);
+    }
+    */
+}
 
 // To do TODO TO-DO to-do ToDo Todo
-bool thisFeatureEnabled = false;
+bool thisFeatureEnabled = true;
 void TextEditor::handleTextBufferSaveToFile() {
-    if(newFile && thisFeatureEnabled) {
-        states["ui_window_ask_file_save_path"] = true;
-        // SDL_ShowOpenFileDialog();
-        SDL_StopTextInput(_window);
-    }
-    // states["ui_window_ask_file_save_path"] = false;
+    // Using SDL_dialog.h
+    SDL_ShowOpenFileDialog(callbackOnSave, NULL, _window, NULL, 2, NULL, 0);
 }
 
 void TextEditor::handleKeyDownEvent(const SDL_Event& e) {

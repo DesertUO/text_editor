@@ -21,6 +21,7 @@ PRIVATE
 target_include_directories(TEditor PRIVATE ${SDL3_INCLUDE_DIRS})
 target_link_libraries(TEditor PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 
+
 # Copy textures folder to the build directory
 file(COPY ${CMAKE_SOURCE_DIR}/src/textures DESTINATION ${CMAKE_BINARY_DIR}/src)
 file(COPY ${CMAKE_SOURCE_DIR}/src/fonts DESTINATION ${CMAKE_BINARY_DIR}/src)

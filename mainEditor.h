@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <SDL3/SDL_dialog.h>
+
 #include "utils.h"
 #include "TextBuffer.h"
 
@@ -32,6 +34,8 @@ class TextEditor {
         int INPUT_NUMBER_WIDTH = 50;
         int MARGIN_LEFT = 50;
         int MARGIN_TOP = 50;
+
+        int TAB_WIDTH = 4;
 
         TextBuffer* textBuffer;
 
