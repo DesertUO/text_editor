@@ -11,6 +11,11 @@ struct Vec2 {
     float y;
 };
 
+struct Vec2Int {
+    int x;
+    int y;
+};
+
 typedef std::vector<uint8_t> grapheme;
 
 struct Timer {

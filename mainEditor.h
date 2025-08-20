@@ -7,8 +7,6 @@
 #include "utils.h"
 #include "TextBuffer.h"
 
-#define CHAR_WIDTH 20
-#define CHAR_HEIGHT 30
 
 class TextEditor {
     private:
@@ -17,12 +15,20 @@ class TextEditor {
         SDL_Window* _window;
         SDL_Renderer* _renderer;
 
+        Vec2Int _windowSize;
+
         TTF_Font* inputFont;
         std::vector<SDL_Texture*> _lineTextures;
         std::vector<SDL_FPoint> _lineSizes;
 
+        int CHAR_WIDTH = 20;
+        int CHAR_HEIGHT = 30;
+
         int INPUT_WIDTH = 80;
         int INPUT_HEIGHT = 30;
+
+        int DEF_INPUT_WIDTH = 80;
+        int DEF_INPUT_HEIGHT = 30;
         int INPUT_NUMBER_WIDTH = 50;
         int MARGIN_LEFT = 50;
         int MARGIN_TOP = 50;
@@ -76,6 +82,9 @@ class TextEditor {
         void handleInputUpKey();
         void handleInputDownKey();
         void handleInputTabKey();
+
+        void handleZoomIn();
+        void handleZoomOut();
 
         void handleInputLCTRLKeyRelease();
 

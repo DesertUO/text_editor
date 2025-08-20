@@ -112,8 +112,6 @@ void TextEditor::run() {
         }
     };
 
-    // Give me the structure of how should I implement the update/render's dt for animation purposes
-    // Based on a always changing frame rate
     float dt = 0.0f;
     Uint64 lastTime = SDL_GetTicksNS();
 
@@ -360,6 +358,24 @@ void TextEditor::handleInputTabKey() {
     syncPreservingCursorPosition();
 }
 
+void TextEditor::handleZoomIn() {
+    if(CHAR_WIDTH < 100) {
+        CHAR_WIDTH += 2;
+        CHAR_HEIGHT += 2;
+        TTF_SetFontSize(inputFont, CHAR_WIDTH);
+        _dirty = true;
+    }
+}
+
+void TextEditor::handleZoomOut() {
+    if(CHAR_WIDTH > 10) {
+        CHAR_WIDTH -= 2;
+        CHAR_HEIGHT -= 2;
+        TTF_SetFontSize(inputFont, CHAR_WIDTH);
+        _dirty = true;
+    }
+}
+
 
 // To do TODO TO-DO to-do ToDo Todo
 bool thisFeatureEnabled = false;
@@ -413,6 +429,18 @@ void TextEditor::handleKeyDownEvent(const SDL_Event& e) {
             }
             break;
         }
+        case SDLK_KP_PLUS: {
+            if(states["LCTRL_DOWN"]) {
+                handleZoomIn();
+            }
+            break;
+        }
+        case SDLK_KP_MINUS: {
+            if(states["LCTRL_DOWN"]) {
+                handleZoomOut();
+            }
+            break;
+        }
     }
 }
 
@@ -455,6 +483,8 @@ void TextEditor::handleEvents(SDL_Event e) {
 
 
 void TextEditor::update(float dt) {
+    SDL_GetWindowSize(_window, &_windowSize.x, &_windowSize.y);
+
     SDL_Event event;
     handleEvents(event);
 
@@ -576,7 +606,6 @@ void TextEditor::renderTextBuffer() {
             int relativeX = x - cameraTopLeftPos[0];
 
             if(relativeX < 0 | relativeX > (INPUT_WIDTH + 1)) { x++; continue; }
-            // In which c is a char* that represents a grapheme cluster: UTF-8 encoded
 
             // Render character surface
             SDL_Surface* textSurface = TTF_RenderText_Blended(inputFont, c.charPtr, 0, currentDrawColor);
@@ -667,10 +696,10 @@ void TextEditor::render() {
     SDL_RenderFillRect(_renderer, &inputBox);
 
     // Render the cursor based on a timer
-    if(timers["cursor_blink"].value > 0.0f || states["currently_typing"]) {
+    if(true || timers["cursor_blink"].value > 0.0f || states["currently_typing"]) {
         float cursorX, cursorY;
         getCursorPosition(cursorX, cursorY);
-        SDL_FRect cursorRect = { cursorX, cursorY, CHAR_WIDTH, CHAR_HEIGHT };
+        SDL_FRect cursorRect = { cursorX, cursorY, (float)CHAR_WIDTH, (float)CHAR_HEIGHT };
         SDL_SetRenderDrawColor(_renderer, 200, 200, 200, SDL_ALPHA_OPAQUE);
         SDL_RenderFillRect(_renderer, &cursorRect);
     }
