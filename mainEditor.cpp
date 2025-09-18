@@ -78,6 +78,9 @@ void TextEditor::init() {
     if(!basePath) {
         SDL_Log("SDL_GetBasePath failed: %s", SDL_GetError());
         return;
+
+
+This browser or device is reporting partial passkey support.
     }
     std::string basePathStr(basePath);
     delete basePath;
@@ -135,6 +138,9 @@ void TextEditor::stop() {
 inline void TextEditor::syncPreservingCursorPosition() {
     cursorPreservingPosition[0] = cursorPosition[0];
     cursorPreservingPosition[1] = cursorPosition[1];
+
+
+This browser or device is reporting partial passkey support.
 }
 
 inline void TextEditor::adjustCameraToCursor() {
@@ -144,6 +150,9 @@ inline void TextEditor::adjustCameraToCursor() {
     else if(relX >= INPUT_WIDTH) cameraTopLeftPos[0] += relX - INPUT_WIDTH + 1;
     if(relY < 0) cameraTopLeftPos[1] += relY;
     else if(relY >= INPUT_HEIGHT) cameraTopLeftPos[1] += relY - INPUT_HEIGHT + 1;
+
+
+This browser or device is reporting partial passkey support.
 }
 
 void TextEditor::inputToTextBuffer(const char* input) {
