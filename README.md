@@ -12,6 +12,7 @@ or some any other monospaced font
 - Using the build.sh script, which uses cmake and make to build the project
 ```
 cd path/to/repo
+chmod +x build.sh
 .\build.sh
 ```
 
