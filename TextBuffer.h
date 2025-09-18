@@ -5,7 +5,7 @@
 #include "utils.h"
 
 struct CharBuff {
-    char* charPtr;
+    std::string ch;
 };
 
 typedef std::vector<CharBuff> line;

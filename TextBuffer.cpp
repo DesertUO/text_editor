@@ -12,7 +12,6 @@ void TextBuffer::freeBuffer() {
     for(int i = 0; i < buffer.size(); i++) {
         auto& line = buffer[i];
         for(int j = 0; j < line.size(); j++) {
-            delete[] line[j].charPtr;
             line.erase(line.begin() + j);
         }
         buffer.erase(buffer.begin() + i);
@@ -41,24 +40,28 @@ std::string TextBuffer::bufferToString() {
     std::string str = "";
     size_t textBufferSize = buffer.size();
     for(size_t i = 0; i < textBufferSize; i++) {
+        // Append all characters from the i-th line
         for(const auto& c: buffer[i]) {
-            str += c.charPtr;
+            SDL_Log("Current char: %s", c.ch.c_str());
+            str += c.ch;
         }
+        // If there's another line, add newline character
         if(i + 1 < textBufferSize)
-            str += '\n';
+            str += std::string("\n");
     }
+    SDL_Log("Final text from buffer: %s", str.c_str());
     return str;
 }
 
 Uint32 TextBuffer::sizeBytes() {
     Uint32 totalBytes = 0;
-    /* textBuffer: std::vector<std::vector<char*>> */
-    totalBytes += buffer.capacity() + sizeof(std::vector<char*>);
+    /* textBuffer: std::vector<std::vector<std::string>> */
+    totalBytes += buffer.capacity() * sizeof(line) + sizeof(std::vector<char*>);
     for(const auto& line : buffer) {
-        totalBytes += line.capacity() * sizeof(char*);
+        totalBytes += line.capacity() * sizeof(CharBuff);
         for(const auto& c: line) {
-            if(c.charPtr != nullptr) {
-                totalBytes += strlen(c.charPtr) + 1;
+            if(!c.ch.empty()) {
+                totalBytes += c.ch.size();;
             }
         }
     }

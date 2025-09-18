@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3/SDL_dialog.h>
+#include <fstream>
 
 #include "utils.h"
 #include "TextBuffer.h"

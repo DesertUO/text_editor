@@ -36,3 +36,11 @@ int ordersOfMagnitudeApart(int a, int b);
 int countDigits(int n);
 
 char* extractUtf8Char(const std::string& text, size_t i);
+
+struct SaveDialogData {
+    std::string* buffer;
+    std::string* pathToFileOpened;
+
+    SaveDialogData(std::string* buf, std::string& path) : buffer(buf), pathToFileOpened(&path) {}
+};
+

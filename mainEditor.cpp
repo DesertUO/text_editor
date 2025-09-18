@@ -147,10 +147,8 @@ inline void TextEditor::adjustCameraToCursor() {
 }
 
 void TextEditor::inputToTextBuffer(const char* input) {
-    char* dest = new char[strlen(input) + 1];
-    strcpy(dest, input);
     CharBuff newDest;
-    newDest.charPtr = dest;
+    newDest.ch = input;
 
     line& currentLine = textBuffer->getBufferModifiable()[cursorPosition[1]];
 
@@ -200,9 +198,6 @@ void TextEditor::handleInputBackspaceKey() {
     if(cursorPosition[0] > 0) {
         line* currentLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
 
-        char * toDelete = (*currentLine)[cursorPosition[0] - 1].charPtr;
-        delete[] toDelete;
-
         currentLine->erase(currentLine->begin() + cursorPosition[0] - 1);
         cursorPosition[0]--;
     }
@@ -210,10 +205,12 @@ void TextEditor::handleInputBackspaceKey() {
 
         if(cursorPosition[1] <= 0) { return; }
 
-        if(textBuffer->getBuffer()[cursorPosition[1]].size() > 0) {
-            line* prevLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
-            line* destLine = &textBuffer->getBufferModifiable()[cursorPosition[1] - 1];
+        line* prevLine = &textBuffer->getBufferModifiable()[cursorPosition[1]];
+        line* destLine = &textBuffer->getBufferModifiable()[cursorPosition[1] - 1];
+
+        if(!prevLine->empty()) {
             int prevDestLineSize = destLine->size();
+
             destLine->insert(
                 destLine->end(),
                 std::make_move_iterator(prevLine->begin() + cursorPosition[0]),
@@ -225,8 +222,9 @@ void TextEditor::handleInputBackspaceKey() {
         } else {
             cursorPosition[0] = previousLine->size();
         }
-        textBuffer->getBufferModifiable().erase(textBuffer->getBuffer().begin() + cursorPosition[1]);
-
+        textBuffer->getBufferModifiable().erase(
+                textBuffer->getBuffer().begin() + cursorPosition[1]
+        );
         cursorPosition[1]--;
     }
 
@@ -342,14 +340,15 @@ void TextEditor::handleInputDownKey() {
 void TextEditor::handleInputTabKey() {
     int cursorX = cursorPosition[0];
     int cursorY = cursorPosition[1];
+
     int spacesToAddToNextTabColumn = TAB_WIDTH - (cursorX % TAB_WIDTH);
+
     line* currentLine = &textBuffer->getBufferModifiable()[cursorY];
+
     for(int i = 0; i < spacesToAddToNextTabColumn; i++) {
-        char space[2] = " ";
-        char* newSpace = extractUtf8Char(space, 0);
         CharBuff spaceBuff;
-        spaceBuff.charPtr = newSpace;
-        currentLine->insert(currentLine->begin() + cursorX, spaceBuff);
+        spaceBuff.ch = " ";
+        currentLine->insert(currentLine->begin() + cursorX + i, spaceBuff);
     }
 
     cursorPosition[0] = cursorPosition[0] + spacesToAddToNextTabColumn;
@@ -393,9 +392,24 @@ static void SDLCALL callbackOnSave(void* userdata, const char* const* filelist, 
     }
 
     while (*filelist) {
-        SDL_Log("Full path to selected file: '%s'", *filelist);
-        filelist++;
+        std::ofstream fileStream(*filelist);
+
+        auto* data = static_cast<SaveDialogData*>(userdata);
+
+        if(fileStream.is_open()) {
+            fileStream <<  *data->buffer;
+            fileStream.close();
+
+            *data->pathToFileOpened = *filelist;
+
+            SDL_Log("Full path to selected file: '%s'", *filelist);
+            filelist++;
+        }
+
+        delete data->buffer;
+        delete data;
     }
+
 
     /*
     if (filter < 0) {
@@ -413,7 +427,21 @@ static void SDLCALL callbackOnSave(void* userdata, const char* const* filelist, 
 bool thisFeatureEnabled = true;
 void TextEditor::handleTextBufferSaveToFile() {
     // Using SDL_dialog.h
-    SDL_ShowOpenFileDialog(callbackOnSave, NULL, _window, NULL, 2, NULL, 0);
+    std::string* textFromBuffer = new std::string(textBuffer->bufferToString());
+
+
+    if(!pathToFileOpened.empty()) {
+        std::ofstream fileStream(pathToFileOpened);
+
+        if(fileStream.is_open()) {
+            fileStream <<  *textFromBuffer;
+            fileStream.close();
+        }
+        delete textFromBuffer;
+    } else {
+        SaveDialogData* data = new SaveDialogData(textFromBuffer, pathToFileOpened);
+        SDL_ShowOpenFileDialog(callbackOnSave, data, _window, NULL, 2, NULL, 0);
+    }
 }
 
 void TextEditor::handleKeyDownEvent(const SDL_Event& e) {
@@ -636,7 +664,7 @@ void TextEditor::renderTextBuffer() {
             if(relativeX < 0 | relativeX > (INPUT_WIDTH + 1)) { x++; continue; }
 
             // Render character surface
-            SDL_Surface* textSurface = TTF_RenderText_Blended(inputFont, c.charPtr, 0, currentDrawColor);
+            SDL_Surface* textSurface = TTF_RenderText_Blended(inputFont, c.ch.c_str(), 0, currentDrawColor);
             if (!textSurface) {
                 SDL_Log("Text rendering failed: %s", SDL_GetError());
                 continue;
