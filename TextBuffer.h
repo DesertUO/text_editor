@@ -20,8 +20,10 @@ class TextBuffer {
         const std::vector<std::vector<CharBuff>>& getBuffer();
         std::vector<std::vector<CharBuff>>& getBufferModifiable();
 
-        void loadText(std::string text);
+        void loadText(const std::string& text);
+
         std::string bufferToString();
+        TextBuffer stringToBuffer(const std::string& text);
 
         void freeBuffer();
 

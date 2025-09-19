@@ -18,18 +18,20 @@ void TextBuffer::freeBuffer() {
     }
 }
 
-void TextBuffer::loadText(std::string text) {
+void TextBuffer::loadText(const std::string& text) {
     std::vector<std::vector<CharBuff>> newBuffer = {{}};
     int currentLine = 0;
-    size_t textSize = text.size();
+    size_t textSize = text.length();
     for(size_t i = 0; i < textSize; i++) {
-        char* newChar = extractUtf8Char(text, i);
-
-        if(i < textSize && text[i] == '\n') {
+        if(i < (textSize-1) && text[i] == '\n') {
             newBuffer.emplace_back();
             currentLine++;
             continue;
         }
+        if(i == (textSize-1) && text[i] == '\n') {
+            break;
+        }
+        char* newChar = extractUtf8Char(text, i);
         newBuffer[currentLine].emplace_back(newChar);
     }
 
@@ -46,11 +48,17 @@ std::string TextBuffer::bufferToString() {
             str += c.ch;
         }
         // If there's another line, add newline character
-        if(i + 1 < textBufferSize)
+        if(i + 1 <= textBufferSize)
             str += std::string("\n");
     }
     SDL_Log("Final text from buffer: %s", str.c_str());
     return str;
+}
+
+TextBuffer TextBuffer::stringToBuffer(const std::string& text) {
+    TextBuffer tb("");
+    tb.loadText(text);
+    return tb;
 }
 
 Uint32 TextBuffer::sizeBytes() {
@@ -70,6 +78,7 @@ Uint32 TextBuffer::sizeBytes() {
 }
 
 const std::vector<std::vector<CharBuff>>& TextBuffer::getBuffer() {
+                // To do: handleTextBufferLoadFromFile();
     return buffer;
 }
 

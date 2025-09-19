@@ -28,7 +28,6 @@ TextEditor::TextEditor() {
     timers = {};
     states = {};
 
-    newFile = true;
     pathToFileOpened = "";
 }
 
@@ -382,8 +381,7 @@ struct SDL_DialogFileFilter filtersOnSave[] = {
     { "All files", "*" }
 };
 
-static void SDLCALL callbackOnSave(void* userdata, const char* const* filelist, int filter)
-{
+static void SDLCALL callbackOnSave(void* userdata, const char* const* filelist, int filter) {
     if (!filelist) {
         SDL_Log("An error occured: %s", SDL_GetError());
         return;
@@ -425,6 +423,52 @@ static void SDLCALL callbackOnSave(void* userdata, const char* const* filelist, 
     */
 }
 
+static void SDLCALL callbackOnFileOpen(void* userdata, const char* const* filelist, int filter)
+{
+    if (!filelist) {
+        SDL_Log("An error occured: %s", SDL_GetError());
+        return;
+    } else if (!*filelist) {
+        SDL_Log("The user did not select any file.");
+        SDL_Log("Most likely, the dialog was canceled.");
+        return;
+    }
+
+    while (*filelist) {
+        std::ifstream fileStream(*filelist, std::ios::binary);
+
+        auto* data = static_cast<OpenDialogData*>(userdata);
+
+        if(fileStream.is_open()) {
+            std::string fileContent(
+                (std::istreambuf_iterator<char>(fileStream)),
+                std::istreambuf_iterator<char>()
+            );
+
+            data->buffer->loadText(fileContent);
+
+            fileStream.close();
+
+            *data->pathToFileOpened = *filelist;
+            SDL_Log("Full path to selected file: '%s'", *filelist);
+
+            filelist++;
+        }
+    }
+
+
+    /*
+    if (filter < 0) {
+        SDL_Log("The current platform does not support fetching "
+                "the selected filter, or the user did not select"
+                " any filter.");
+    } else if (filter < SDL_arraysize(filtersOnSave)) {
+        SDL_Log("The filter selected by the user is '%s' (%s).",
+                filtersOnSave[filter].pattern, filtersOnSave[filter].name);
+    }
+    */
+}
+
 // To do TODO TO-DO to-do ToDo Todo
 bool thisFeatureEnabled = true;
 void TextEditor::handleTextBufferSaveToFile() {
@@ -434,7 +478,6 @@ void TextEditor::handleTextBufferSaveToFile() {
 
     if(!pathToFileOpened.empty()) {
         std::ofstream fileStream(pathToFileOpened);
-
         if(fileStream.is_open()) {
             fileStream <<  *textFromBuffer;
             fileStream.close();
@@ -444,6 +487,16 @@ void TextEditor::handleTextBufferSaveToFile() {
         SaveDialogData* data = new SaveDialogData(textFromBuffer, pathToFileOpened);
         SDL_ShowOpenFileDialog(callbackOnSave, data, _window, NULL, 2, NULL, 0);
     }
+}
+
+void TextEditor::handleTextBufferOpenFromFile() {
+    TextBuffer* newBuffer = new TextBuffer();
+    OpenDialogData* data = new OpenDialogData(newBuffer, pathToFileOpened);
+    SDL_ShowOpenFileDialog(callbackOnFileOpen, data, _window, NULL, 2, NULL, 0);
+
+    this->textBuffer->freeBuffer();
+    delete this->textBuffer;
+    this->textBuffer = newBuffer;
 }
 
 void TextEditor::handleKeyDownEvent(const SDL_Event& e) {
@@ -481,9 +534,16 @@ void TextEditor::handleKeyDownEvent(const SDL_Event& e) {
             // SDL_StopTextInput(_window);
             break;
 
+        // Handeling ctrl shortcuts
         case SDLK_S: {
             if(states["LCTRL_DOWN"]) {
                 handleTextBufferSaveToFile();
+            }
+            break;
+        }
+        case SDLK_O: {
+            if(states["LCTRL_DOWN"]) {
+                handleTextBufferOpenFromFile();
             }
             break;
         }
@@ -707,17 +767,6 @@ void TextEditor::renderUIElements() {
             &originalColors.b,
             &originalColors.a
             );
-    if(states["ui_window_ask_file_save_path"]) {
-        SDL_SetRenderDrawColor(_renderer, 250, 100, 200, SDL_ALPHA_OPAQUE);
-        Vec2 halfSizeUIWindowAskFileSavePath{200.0f, 200.0f};
-        SDL_FRect ui_background {
-            winWidth/2.0f - halfSizeUIWindowAskFileSavePath.x,
-            winHeight/2.0f - halfSizeUIWindowAskFileSavePath.y,
-            2.0f * halfSizeUIWindowAskFileSavePath.x,
-            2.0f * halfSizeUIWindowAskFileSavePath.y
-        };
-        SDL_RenderFillRect(_renderer, &ui_background);
-    }
     SDL_SetRenderDrawColor(
             _renderer,
             originalColors.r,
@@ -773,6 +822,37 @@ void TextEditor::render() {
     renderTextBufferLineNumbers();
 
     renderUIElements();
+
+    SDL_Color currentDrawColor;
+
+    std::string fileName = "New file";
+    if(!pathToFileOpened.empty()) {
+        size_t lastSlash = pathToFileOpened.find_last_of("/\\");
+        if(lastSlash != std::string::npos) {
+            fileName = pathToFileOpened.substr(lastSlash + 1);
+        } else {
+            fileName = pathToFileOpened;
+        }
+    }
+
+    SDL_GetRenderDrawColor(_renderer, &currentDrawColor.r, &currentDrawColor.g, &currentDrawColor.b, &currentDrawColor.a);
+
+    SDL_Surface* bufferPathSurface = TTF_RenderText_Blended(inputFont, fileName.c_str(), 0, currentDrawColor);
+    if (!bufferPathSurface) {
+        SDL_Log("Text rendering failed: %s", SDL_GetError());
+    }
+
+    SDL_Texture* bufferPathTexture = SDL_CreateTextureFromSurface(_renderer, bufferPathSurface);
+    if (!bufferPathSurface) {
+        SDL_Log("Texture creation failed: %s", SDL_GetError());
+        SDL_DestroySurface(bufferPathSurface);
+    }
+
+    SDL_FRect dst = { 10, 10, static_cast<float>(bufferPathSurface->w), static_cast<float>(bufferPathSurface->h) };
+    SDL_RenderTexture(_renderer, bufferPathTexture, NULL, &dst);
+
+    SDL_DestroyTexture(bufferPathTexture);
+    SDL_DestroySurface(bufferPathSurface);
 
     SDL_RenderPresent(_renderer);
 }

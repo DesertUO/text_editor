@@ -14,9 +14,9 @@ add_executable(TEditor WIN32 main.cpp)
 target_sources(TEditor
 PRIVATE
     main.cpp
-    utils.h utils.cpp
     mainEditor.h mainEditor.cpp
     TextBuffer.h TextBuffer.cpp
+    utils.h utils.cpp
 )
 target_include_directories(TEditor PRIVATE ${SDL3_INCLUDE_DIRS})
 target_link_libraries(TEditor PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf)

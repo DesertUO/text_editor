@@ -9,7 +9,7 @@
 
 #include "utils.h"
 #include "TextBuffer.h"
-
+#include "SDL_Utils.h"
 
 class TextEditor {
     private:
@@ -51,7 +51,6 @@ class TextEditor {
 
         bool _dirty = true;
 
-        bool newFile = true;
         std::string pathToFileOpened;
     public:
         TextEditor();
@@ -97,6 +96,7 @@ class TextEditor {
         void adjustCameraToCursor();
 
         void handleTextBufferSaveToFile();
+        void handleTextBufferOpenFromFile();
 
 };
 
